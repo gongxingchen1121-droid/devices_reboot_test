@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+   设备重启自动化测试报告 —— 页面模板
+  ----------------------------------------------------------------------------
+   本文件只负责"长什么样"（结构 + 样式），不负责"写什么"。
+   报告里的所有文字都在 config/report_config.py 里，改文字请改那个文件。
+
+   占位符写成 $$ + 大写名称（例如 $$REPORT_TITLE 对应的就是报告标题）。
+   注意：
+     * 这里用的是 $$ 占位符，所以下面的 CSS 花括号 {} 是普通字符，
+       想改颜色、字号、间距，直接改 CSS 就行，不用担心破坏模板；
+     * 想在这个注释或页面上原样显示一个 $$ 符号，要连写两个，即 $$$$ ；
+     * 不要删除 $$xxx 占位符，除非你确实不想在报告里看到那一项。
+  ============================================================================
+-->
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$REPORT_TITLE</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 15px;
+            font-size: 24px;
+        }
+        h2 {
+            color: #007bff;
+            margin-top: 30px;
+            border-left: 4px solid #007bff;
+            padding-left: 10px;
+            font-size: 19px;
+        }
+        .subtitle-line {
+            text-align: center;
+            color: #666;
+        }
+        .data-source-note {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            margin-top: 6px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        tbody tr:hover {
+            background-color: #fafafa;
+        }
+        .summary-box {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            gap: 20px;
+        }
+        .stat-card {
+            flex: 1;
+            text-align: center;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+        }
+        .stat-card.total {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+        .stat-card.pass {
+            background-color: #e8f5e9;
+            border-left: 4px solid #4caf50;
+        }
+        .stat-card.fail {
+            background-color: #ffebee;
+            border-left: 4px solid #f44336;
+        }
+        .stat-card.rate {
+            background-color: #fff3e0;
+            border-left: 4px solid #ff9800;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #333;
+        }
+        /* 数字配色：涨/通过用绿，失败用红，错误用橙 */
+        .num-pass { color: #4caf50; font-weight: bold; }
+        .num-fail { color: #f44336; font-weight: bold; }
+        .num-error { color: #ff9800; font-weight: bold; }
+        .num-timeout { color: #9c27b0; font-weight: bold; }
+        .conclusion {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+        }
+        .conclusion h3 {
+            margin-top: 0;
+            color: $CONCLUSION_COLOR;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+        .status-excellent { background-color: #28a745; }
+        .status-good { background-color: #ffc107; color: #333; }
+        .status-fair { background-color: #fd7e14; }
+        .status-poor { background-color: #dc3545; }
+        .notice {
+            background-color: #fff3e0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        .notice strong { color: #ff9800; }
+        ul {
+            line-height: 1.8;
+        }
+        .footer {
+            text-align: center;
+            color: #999;
+            margin-top: 30px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>$REPORT_TITLE</h1>
+        <p class="subtitle-line">$SUBTITLE_LINE</p>
+        <p class="data-source-note">$DATA_SOURCE_NOTE</p>
+
+        <h2>$SEC_OVERVIEW、$TITLE_OVERVIEW</h2>
+        <table>
+            <tr>
+                <td>$LABEL_FIRMWARE</td>
+                <td>$FIRMWARE_VALUE</td>
+            </tr>
+            <tr>
+                <td>$LABEL_TEST_TYPE</td>
+                <td>$TEST_TYPE_VALUE</td>
+            </tr>
+            <tr>
+                <td>$LABEL_DEVICE_COUNT</td>
+                <td>$DEVICE_COUNT_VALUE</td>
+            </tr>
+            <tr>
+                <td>$LABEL_TEST_PER_DEVICE</td>
+                <td>$TEST_PER_DEVICE_VALUE</td>
+            </tr>
+            <tr>
+                <td>$LABEL_TOTAL_TESTS</td>
+                <td>$TOTAL_TESTS_VALUE</td>
+            </tr>
+            <tr>
+                <td>$LABEL_TIMEOUT</td>
+                <td>$TIMEOUT_VALUE</td>
+            </tr>
+            <tr>
+                <td>$LABEL_KEYWORDS</td>
+                <td>$KEYWORDS_VALUE</td>
+            </tr>
+        </table>
+
+        <h2>$SEC_SUMMARY、$TITLE_SUMMARY</h2>
+        <div class="summary-box">
+            <div class="stat-card total">
+                <div class="stat-label">$CARD_TOTAL_LABEL</div>
+                <div class="stat-value">$CARD_TOTAL_VALUE</div>
+            </div>
+            <div class="stat-card pass">
+                <div class="stat-label">$CARD_PASS_LABEL</div>
+                <div class="stat-value num-pass">$CARD_PASS_VALUE</div>
+            </div>
+            <div class="stat-card fail">
+                <div class="stat-label">$CARD_FAIL_LABEL</div>
+                <div class="stat-value num-fail">$CARD_FAIL_VALUE</div>
+            </div>
+            <div class="stat-card rate">
+                <div class="stat-label">$CARD_RATE_LABEL</div>
+                <div class="stat-value num-error">$CARD_RATE_VALUE</div>
+            </div>
+        </div>
+        $ERROR_NOTICE
+
+        <h2>$SEC_DEVICES、$TITLE_DEVICES</h2>
+        <table>
+            <thead>
+                <tr>
+$DEVICE_HEADERS
+                </tr>
+            </thead>
+            <tbody>
+$DEVICE_ROWS
+            </tbody>
+        </table>
+
+$FAILURE_SECTION
+
+        <div class="conclusion">
+            <h3>$SEC_CONCLUSION、$TITLE_CONCLUSION</h3>
+            <p><strong>$CONCLUSION_HEADING</strong><span style="color: $CONCLUSION_COLOR; font-weight: bold;">$CONCLUSION_STATUS</span></p>
+            <p>$CONCLUSION_SUMMARY</p>
+            <h4>$ADVICE_HEADING</h4>
+            <ul>
+$ADVICES
+            </ul>
+        </div>
+
+        <h2>$SEC_ATTACHMENTS、$TITLE_ATTACHMENTS</h2>
+        <ul>
+$ATTACHMENTS
+        </ul>
+
+        <p class="footer">$FOOTER</p>
+    </div>
+</body>
+</html>

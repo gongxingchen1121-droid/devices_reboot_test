@@ -1,0 +1,4 @@
+# 仅供 tools/build_delivery_docs.py 生成 Word 文档和流程图使用。
+# 主测试脚本不依赖这两个库，因此不放入项目根目录的 requirements.txt。
+python-docx==1.2.0
+Pillow==12.3.0

@@ -1,0 +1,38 @@
+{
+    // VSCode 一键运行/调试配置（按 F5，或在"运行和调试"面板左上角选择配置）
+    // 说明见下方每条 name。
+    "version": "0.2.0",
+    "configurations": [
+        {
+            // 正式跑测试：会真的操作串口、重启设备，请确认设备已连好、串口没被别的软件占用
+            "name": "① 运行设备重启测试 (main.py)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                // 中文 Windows 下防止打印 ✅ ⚠️ 时因 GBK 编码报 UnicodeEncodeError
+                "PYTHONIOENCODING": "utf-8",
+                // 让日志边跑边出，而不是攒到最后一次性刷屏
+                "PYTHONUNBUFFERED": "1"
+            },
+            "justMyCode": false
+        },
+        {
+            // 不碰设备，只根据 设备测试结果报告/ 下已有的 Excel 重新生成 HTML 报告
+            // 改完 config/report_config.py 里的文案后，用这个即可立刻看到效果
+            "name": "② 只重新生成 HTML 报告 (不测设备)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "reports.html_report",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONIOENCODING": "utf-8",
+                "PYTHONUNBUFFERED": "1"
+            },
+            "justMyCode": false
+        }
+    ]
+}

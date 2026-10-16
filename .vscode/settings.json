@@ -1,0 +1,12 @@
+{
+    // 工作区设置，仅对当前项目生效
+    "files.encoding": "utf8",
+    // 让 Pylance 能解析 config / core / reports / utils 这几个本地包
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}"
+    ],
+    // 集成终端里也统一 UTF-8，避免打印 ✅ ⚠️ 时报 GBK 编码错误
+    "terminal.integrated.env.windows": {
+        "PYTHONIOENCODING": "utf-8"
+    }
+}

@@ -1,0 +1,25 @@
+name: Verify
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python-syntax:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Check Python syntax
+        run: python -m compileall -q config core reports tools utils main.py
+      - name: Check imports with example configuration
+        shell: pwsh
+        run: |
+          python -m pip install -r requirements.txt
+          Copy-Item -LiteralPath config/devices.example.py -Destination config/devices.py
+          python -c "import main"

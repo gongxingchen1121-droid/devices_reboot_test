@@ -464,9 +464,10 @@ def generate_html_report_from_excel(excel_files=None, source_label=None, output_
         "LABEL_TIMEOUT": _esc(LABEL_TIMEOUT),
         "TIMEOUT_VALUE": f"{MAX_BOOT_TIMEOUT_SECONDS} {UNIT_SECONDS_PER_TEST}",
         "LABEL_KEYWORDS": _esc(LABEL_KEYWORDS),
-        "KEYWORDS_VALUE": safe_format(TEMPLATE_KEYWORDS,
+        "KEYWORDS_VALUE": (safe_format(TEMPLATE_KEYWORDS,
                                       kw1=_esc(SUCCESS_KEYWORD),
-                                      kw2=_esc(SUCCESS_KEYWORD2)),
+                                      kw2=_esc(SUCCESS_KEYWORD2))
+                           if SUCCESS_KEYWORD2 else f'"{_esc(SUCCESS_KEYWORD)}"'),
 
         "CARD_TOTAL_LABEL": _esc(CARD_LABEL_TOTAL),
         "CARD_TOTAL_VALUE": totals["total"],

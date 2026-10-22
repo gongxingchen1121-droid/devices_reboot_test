@@ -5,7 +5,7 @@
 """测试执行器 - 负责单设备测试逻辑
 
 结果分类约定（三类，含义不同，不要混）：
-  PASS  —— 两个启动关键词均检测到
+  PASS  —— 配置的启动关键词均检测到
   FAIL  —— 串口正常，但设备在等待上限内没有启动（真·启动失败）
   ERROR —— 串口/脚本层面出问题导致这次没测成（如串口断链、重连失败），不计入成功率
 """
@@ -155,7 +155,9 @@ def run_single_device_test(device_config, results_queue, log_queue, device_folde
         ctx.write_log(f"[{name}] ========== 开始测试 ==========")
         ctx.write_log(f"[{name}] 串口: {ctx.port}, 波特率: {ctx.baudrate}")
         ctx.write_log(f"[{name}] 总次数: {REBOOT_COUNT} | 检测关键词后等待: {WAIT_AFTER_BOOT} 秒")
-        ctx.write_log(f"[{name}] 成功关键词1: \"{SUCCESS_KEYWORD}\"，关键词2: \"{SUCCESS_KEYWORD2}\"（需同时检测）")
+        keyword_description = (f'"{SUCCESS_KEYWORD}" 和 "{SUCCESS_KEYWORD2}"（需同时检测）'
+                               if SUCCESS_KEYWORD2 else f'"{SUCCESS_KEYWORD}"')
+        ctx.write_log(f"[{name}] 启动成功关键词: {keyword_description}")
         ctx.write_log(f"[{name}] USER_ID: {ctx.user_id}, LICENSE_ID: {ctx.license_id}, SN: {ctx.sn}")
         ctx.write_log(f"[{name}] 结果保存目录: {ctx.device_folder}")
         ctx.write_log(f"[{name}] 单次等待上限: {MAX_BOOT_TIMEOUT_SECONDS} 秒，"

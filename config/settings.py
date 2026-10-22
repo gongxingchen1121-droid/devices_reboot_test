@@ -17,8 +17,8 @@ import os
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # ================== 测试配置 ==================
-SUCCESS_KEYWORD = 'iot online'    # 启动成功关键词1
-SUCCESS_KEYWORD2 = '==>trim:'     # 启动成功关键词2（需与关键词1同时出现才算成功）
+SUCCESS_KEYWORD = 'iot status: 2'  # 本类设备的启动成功关键词
+SUCCESS_KEYWORD2 = None           # 可选；设为字符串时需同时检测到两个关键词
 REBOOT_COUNT = 20                 # 每台设备的重启测试次数
 WAIT_AFTER_BOOT = 2               # 一次测试结束后的间隔（秒）
 CMD_WAIT_SEC = 2                  # 发送停止录像/重命名命令后的等待时间（秒）
@@ -26,7 +26,7 @@ LOG_SERIAL_DATA = True            # 是否记录串口原始数据日志
 
 # ================== 超时与判定阈值 ==================
 # 以下三处是"报告里会写出来的数字"，全部由这里单一来源，改这里即可
-MAX_BOOT_TIMEOUT_SECONDS = 180    # 单次启动等待上限（秒），超时自动补发 reboot 并重新计时
+MAX_BOOT_TIMEOUT_SECONDS = 120    # 单次启动等待上限（秒），超时自动补发 reboot 并重新计时
 MAX_TIMEOUT_REBOOT_PER_TEST = 3   # 单次测试最多补发几次 reboot；补满仍不启动就判该次 FAIL。
                                   # 必设：不设上限的话，设备一直起不来会无限循环补发，
                                   # 整个测试永远结束不了。最坏耗时 = (上限+1) × 单次上限。
@@ -34,7 +34,7 @@ POST_COLLECT_SECONDS = 5          # 启动成功后补采集日志的"硬上限"
 POST_BOOT_IDLE_GAP = 0.5          # 补采集期间"静默"超过这个时长就提前收工（秒）。
                                   # 既收全启动后那段连续日志，又不用死等满 5 秒。
                                   # 设得比 POST_COLLECT_SECONDS 大，即退化为"固定等满"。
-SLOW_BOOT_THRESHOLD = 60          # 慢启动判定阈值（秒），超过则计入慢启动统计
+SLOW_BOOT_THRESHOLD = 60          # 60 秒内正常；超过 60 秒但未超时则计入慢启动统计
 
 # ================== 串口配置 ==================
 SERIAL_READ_TIMEOUT = 1           # 串口读超时（秒）

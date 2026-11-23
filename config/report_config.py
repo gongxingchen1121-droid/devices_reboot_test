@@ -20,10 +20,10 @@
 # ==================== 一、报告基本信息 ====================
 
 # 报告大标题
-REPORT_TITLE = "【基线|双目|中性品牌】T33ZL-6.2.0版本-开启efuse设备重启自动化测试报告"
+REPORT_TITLE = "设备重启自动化测试报告"
 
 # 报告副标题（显示在标题下方，也会填入"测试类型"一行）
-REPORT_SUBTITLE = "开启efuse设备重启自动化测试"
+REPORT_SUBTITLE = "设备重启稳定性测试"
 
 # 测试日期。留空 = 自动使用报告生成当天；也可手填，例如 "2026年07月15日"
 TEST_DATE = ""
@@ -37,12 +37,7 @@ REPORT_OUTPUT_FILENAME = "测试报告.html"
 
 # ==================== 二、测试固件信息 ====================
 # 用列表写，列表里的顺序 = 报告里的显示顺序。每一条占一行。
-FIRMWARE_INFO = [
-    "Build Date:2026-06-29-19:31:19-CST Version:6.2.0 C42AB",
-    "SDK_version:15223-2.1.1:2026-06-17 15:06:07 CST",
-    "media_version:6.1.14.68346e0a7 feature_6.0.x_",
-    "git log:2026-06-29, dev_by_t33zl_ipc, 777f6c1eb, P by zhengzhiyi",
-]
+FIRMWARE_INFO = []
 
 
 # ==================== 三、章节标题 ====================
@@ -53,7 +48,6 @@ SECTION_SUMMARY = "测试结果汇总"
 SECTION_DEVICES = "各设备详细数据"
 SECTION_FAILURES = "失败原因分析"
 SECTION_CONCLUSION = "测试结论与建议"
-SECTION_ATTACHMENTS = "附件清单"
 
 
 # ==================== 四、"测试概况"表格的行标签 ====================
@@ -183,16 +177,6 @@ ADVICE_SERIAL_ERROR = {
 # 固定追加的建议（每次都会出现），不需要就留空列表 []
 FIXED_ADVICE = [
     "日志分析：对于失败原因，建议研发根据测试提供的串口日志，定位具体问题",
-]
-
-
-# ==================== 九、附件清单 ====================
-ATTACHMENTS = [
-    "各设备 Excel 详细报告（reboot_test_<SN>.xlsx）",
-    "各设备完整执行日志（log_<SN>.txt）",
-    "各设备串口原始数据日志（serial_log_<SN>.txt）",
-    "各设备测试摘要（summary_<SN>.txt）",
-    "多设备汇总报告（汇总报告_<时间戳>.txt）",
 ]
 
 

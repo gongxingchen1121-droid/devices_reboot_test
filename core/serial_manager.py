@@ -18,6 +18,7 @@ from typing import NamedTuple, Optional
 import serial
 
 from config import (
+    PLATFORM_MODE,
     CHECK_INTERVAL, RETRY_INTERVAL, MAX_RETRY, LOG_SERIAL_DATA,
     SUCCESS_KEYWORD2, MAX_BOOT_TIMEOUT_SECONDS, MAX_TIMEOUT_REBOOT_PER_TEST,
     POST_COLLECT_SECONDS, POST_BOOT_IDLE_GAP,
@@ -76,13 +77,16 @@ def send_serial_cmd(ser, cmd, wait_sec, device_name="", stop_event=None):
             time.sleep(wait_sec)
         return True
     except serial.SerialTimeoutException:
-        write_log_safe(f"[{device_name}] [WARN] 写串口超时: {cmd}")
+        write_log_safe(f"[{device_name}] [WARN] 写串口超时" if PLATFORM_MODE else
+                       f"[{device_name}] [WARN] 写串口超时: {cmd}")
         return False
     except serial.SerialException as e:
-        write_log_safe(f"[{device_name}] [WARN] 写串口异常: {e}（命令: {cmd}）")
+        write_log_safe(f"[{device_name}] [WARN] 写串口异常" if PLATFORM_MODE else
+                       f"[{device_name}] [WARN] 写串口异常: {e}（命令: {cmd}）")
         return False
     except Exception as e:
-        write_log_safe(f"[{device_name}] [WARN] 发送命令失败: {e}（命令: {cmd}）")
+        write_log_safe(f"[{device_name}] [WARN] 发送命令失败" if PLATFORM_MODE else
+                       f"[{device_name}] [WARN] 发送命令失败: {e}（命令: {cmd}）")
         return False
 
 
@@ -216,7 +220,7 @@ def _make_line_writer(serial_log_fp):
 
 
 def wait_for_boot_complete(ser, keyword, serial_log_fp=None, device_name="", stop_event=None):
-    """监听串口，直到同时检测到两个启动关键词。
+    """监听串口，直到检测到配置的启动关键词。
 
     超过 MAX_BOOT_TIMEOUT_SECONDS 仍未启动则自动补发 reboot 并重新计时。
 
@@ -247,8 +251,9 @@ def wait_for_boot_complete(ser, keyword, serial_log_fp=None, device_name="", sto
         keyword2_found = False
         start_time = time.monotonic()
 
-    write_log_safe(f"[{device_name}] [INFO] 开始监听串口，等待同时出现关键词 "
-                   f"'{keyword}' 和 '{SUCCESS_KEYWORD2}'")
+    keyword_description = (f"同时出现关键词 '{keyword}' 和 '{SUCCESS_KEYWORD2}'"
+                           if SUCCESS_KEYWORD2 else f"出现关键词 '{keyword}'")
+    write_log_safe(f"[{device_name}] [INFO] 开始监听串口，等待{keyword_description}")
     write_log_safe(f"[{device_name}] [INFO] 单次等待上限 {MAX_BOOT_TIMEOUT_SECONDS} 秒，"
                    f"超时将自动补发 reboot")
 
@@ -345,13 +350,13 @@ def wait_for_boot_complete(ser, keyword, serial_log_fp=None, device_name="", sto
                             keyword1_found = True
                             write_log_safe(f"[{device_name}] [OK] 检测到关键词1 '{keyword}'")
 
-                        if SUCCESS_KEYWORD2 in tail and not keyword2_found:
+                        if SUCCESS_KEYWORD2 and SUCCESS_KEYWORD2 in tail and not keyword2_found:
                             keyword2_found = True
                             write_log_safe(f"[{device_name}] [OK] 检测到关键词2 '{SUCCESS_KEYWORD2}'")
 
-                        if keyword1_found and keyword2_found:
+                        if keyword1_found and (not SUCCESS_KEYWORD2 or keyword2_found):
                             total_duration = last_duration()
-                            write_log_safe(f"[{device_name}] [OK] 两个关键词均已检测到，"
+                            write_log_safe(f"[{device_name}] [OK] 启动关键词已检测到，"
                                            f"设备启动成功，耗时 {round(total_duration, 2)} 秒")
                             if timeout_reboot_count > 0:
                                 write_log_safe(f"[{device_name}] [INFO] 本次启动共经历 "

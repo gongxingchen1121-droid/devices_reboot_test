@@ -10,7 +10,12 @@
 """
 
 from .settings import *        # noqa: F401,F403
-from .devices import *         # noqa: F401,F403
+try:
+    from .devices import *     # noqa: F401,F403
+except ModuleNotFoundError as error:
+    if error.name != f"{__name__}.devices":
+        raise
+    DEVICES_CONFIG = []
 from .report_config import *   # noqa: F401,F403
 
 # 设备 SN 列表从设备清单自动派生，

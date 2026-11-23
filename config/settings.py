@@ -9,6 +9,8 @@
 """
 
 import os
+from math import isfinite as _isfinite
+from threading import TIMEOUT_MAX as _TIMEOUT_MAX
 
 # ================== 路径配置 ==================
 # 项目根目录（config/ 的上一级）。
@@ -17,8 +19,8 @@ import os
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # ================== 测试配置 ==================
-SUCCESS_KEYWORD = 'iot online'    # 启动成功关键词1
-SUCCESS_KEYWORD2 = '==>trim:'     # 启动成功关键词2（需与关键词1同时出现才算成功）
+SUCCESS_KEYWORD = 'iot online'    # 本类设备的启动成功关键词
+SUCCESS_KEYWORD2 = None           # 可选；设为字符串时需同时检测到两个关键词
 REBOOT_COUNT = 20                 # 每台设备的重启测试次数
 WAIT_AFTER_BOOT = 2               # 一次测试结束后的间隔（秒）
 CMD_WAIT_SEC = 2                  # 发送停止录像/重命名命令后的等待时间（秒）
@@ -26,7 +28,7 @@ LOG_SERIAL_DATA = True            # 是否记录串口原始数据日志
 
 # ================== 超时与判定阈值 ==================
 # 以下三处是"报告里会写出来的数字"，全部由这里单一来源，改这里即可
-MAX_BOOT_TIMEOUT_SECONDS = 180    # 单次启动等待上限（秒），超时自动补发 reboot 并重新计时
+MAX_BOOT_TIMEOUT_SECONDS = 120    # 单次启动等待上限（秒），超时自动补发 reboot 并重新计时
 MAX_TIMEOUT_REBOOT_PER_TEST = 3   # 单次测试最多补发几次 reboot；补满仍不启动就判该次 FAIL。
                                   # 必设：不设上限的话，设备一直起不来会无限循环补发，
                                   # 整个测试永远结束不了。最坏耗时 = (上限+1) × 单次上限。
@@ -34,7 +36,7 @@ POST_COLLECT_SECONDS = 5          # 启动成功后补采集日志的"硬上限"
 POST_BOOT_IDLE_GAP = 0.5          # 补采集期间"静默"超过这个时长就提前收工（秒）。
                                   # 既收全启动后那段连续日志，又不用死等满 5 秒。
                                   # 设得比 POST_COLLECT_SECONDS 大，即退化为"固定等满"。
-SLOW_BOOT_THRESHOLD = 60          # 慢启动判定阈值（秒），超过则计入慢启动统计
+SLOW_BOOT_THRESHOLD = 60          # 60 秒内正常；超过 60 秒但未超时则计入慢启动统计
 
 # ================== 串口配置 ==================
 SERIAL_READ_TIMEOUT = 1           # 串口读超时（秒）
@@ -46,3 +48,42 @@ AUTO_RECOVER = True               # 串口异常时是否自动重连
 
 # ================== 目录配置 ==================
 BASE_OUTPUT_DIR = os.path.join(PROJECT_ROOT, "设备测试结果报告")   # 测试结果输出根目录（绝对路径）
+PLATFORM_MODE = False
+
+
+def validate_runtime_settings():
+    """校验无交互运行所需的参数，错误信息只列字段名。"""
+    errors = []
+    for name, value, minimum in (
+        ("REBOOT_COUNT", REBOOT_COUNT, 1),
+        ("MAX_TIMEOUT_REBOOT_PER_TEST", MAX_TIMEOUT_REBOOT_PER_TEST, 0),
+        ("MAX_RETRY", MAX_RETRY, 0),
+    ):
+        if type(value) is not int or value < minimum:
+            errors.append(f"{name} 必须是大于或等于 {minimum} 的整数。")
+
+    for name, value, positive in (
+        ("WAIT_AFTER_BOOT", WAIT_AFTER_BOOT, False),
+        ("CMD_WAIT_SEC", CMD_WAIT_SEC, False),
+        ("MAX_BOOT_TIMEOUT_SECONDS", MAX_BOOT_TIMEOUT_SECONDS, True),
+        ("POST_COLLECT_SECONDS", POST_COLLECT_SECONDS, False),
+        ("POST_BOOT_IDLE_GAP", POST_BOOT_IDLE_GAP, False),
+        ("SLOW_BOOT_THRESHOLD", SLOW_BOOT_THRESHOLD, False),
+        ("SERIAL_READ_TIMEOUT", SERIAL_READ_TIMEOUT, False),
+        ("SERIAL_WRITE_TIMEOUT", SERIAL_WRITE_TIMEOUT, True),
+        ("CHECK_INTERVAL", CHECK_INTERVAL, False),
+        ("RETRY_INTERVAL", RETRY_INTERVAL, False),
+    ):
+        if (type(value) not in (int, float) or value < 0
+                or value > _TIMEOUT_MAX or not _isfinite(value) or (positive and value == 0)):
+            requirement = "正数" if positive else "非负数"
+            errors.append(f"{name} 必须是合法的{requirement}，上限为 {_TIMEOUT_MAX:g} 秒。")
+
+    if not isinstance(SUCCESS_KEYWORD, str) or not SUCCESS_KEYWORD.strip():
+        errors.append("SUCCESS_KEYWORD 必须是非空字符串。")
+    if SUCCESS_KEYWORD2 is not None and not isinstance(SUCCESS_KEYWORD2, str):
+        errors.append("SUCCESS_KEYWORD2 必须是字符串或 None。")
+    for name, value in (("LOG_SERIAL_DATA", LOG_SERIAL_DATA), ("AUTO_RECOVER", AUTO_RECOVER)):
+        if type(value) is not bool:
+            errors.append(f"{name} 必须是布尔值。")
+    return errors

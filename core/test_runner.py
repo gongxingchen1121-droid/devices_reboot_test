@@ -5,8 +5,8 @@
 """测试执行器 - 负责单设备测试逻辑
 
 结果分类约定（三类，含义不同，不要混）：
-  PASS  —— 两个启动关键词均检测到
-  FAIL  —— 串口正常，但设备在等待上限内没有启动（真·启动失败）
+  PASS  —— 首次等待内检测到启动关键词
+  FAIL  —— 首次启动超时（含补发后恢复），或补发后仍未启动
   ERROR —— 串口/脚本层面出问题导致这次没测成（如串口断链、重连失败），不计入成功率
 """
 
@@ -20,6 +20,7 @@ from config import (
     SUCCESS_KEYWORD, SUCCESS_KEYWORD2, REBOOT_COUNT, WAIT_AFTER_BOOT,
     CMD_WAIT_SEC, LOG_SERIAL_DATA, AUTO_RECOVER,
     MAX_BOOT_TIMEOUT_SECONDS, MAX_TIMEOUT_REBOOT_PER_TEST, SLOW_BOOT_THRESHOLD,
+    PLATFORM_MODE,
 )
 from core.serial_manager import (
     setup_serial, send_serial_cmd, send_reboot,
@@ -133,6 +134,8 @@ class _DeviceTestContext:
 
     # ---------------- 记录一条结果 ----------------
     def record(self, index, start_str, result, duration, tb_cnt, excerpt, reason, fail_time=''):
+        if PLATFORM_MODE:
+            excerpt = ""
         self.results.append(_make_row(
             self.device_name, index, start_str, result, duration,
             tb_cnt, excerpt, reason, fail_time))
@@ -155,8 +158,13 @@ def run_single_device_test(device_config, results_queue, log_queue, device_folde
         ctx.write_log(f"[{name}] ========== 开始测试 ==========")
         ctx.write_log(f"[{name}] 串口: {ctx.port}, 波特率: {ctx.baudrate}")
         ctx.write_log(f"[{name}] 总次数: {REBOOT_COUNT} | 检测关键词后等待: {WAIT_AFTER_BOOT} 秒")
-        ctx.write_log(f"[{name}] 成功关键词1: \"{SUCCESS_KEYWORD}\"，关键词2: \"{SUCCESS_KEYWORD2}\"（需同时检测）")
-        ctx.write_log(f"[{name}] USER_ID: {ctx.user_id}, LICENSE_ID: {ctx.license_id}, SN: {ctx.sn}")
+        keyword_description = (f'"{SUCCESS_KEYWORD}" 和 "{SUCCESS_KEYWORD2}"（需同时检测）'
+                               if SUCCESS_KEYWORD2 else f'"{SUCCESS_KEYWORD}"')
+        ctx.write_log(f"[{name}] 启动成功关键词: {keyword_description}")
+        if PLATFORM_MODE:
+            ctx.write_log(f"[{name}] SN: {ctx.sn}")
+        else:
+            ctx.write_log(f"[{name}] USER_ID: {ctx.user_id}, LICENSE_ID: {ctx.license_id}, SN: {ctx.sn}")
         ctx.write_log(f"[{name}] 结果保存目录: {ctx.device_folder}")
         ctx.write_log(f"[{name}] 单次等待上限: {MAX_BOOT_TIMEOUT_SECONDS} 秒，"
                       f"最多补发 {MAX_TIMEOUT_REBOOT_PER_TEST} 次 reboot")
@@ -287,7 +295,7 @@ def _run_reboot_loop(ctx):
             ctx.record(i, test_start_str, "ERROR", duration, tb_cnt, br.full_log,
                        br.error, test_start_str)
             ctx.write_log(f"[{name}] [ERROR] {br.error}")
-        elif br.success:
+        elif br.success and tb_cnt == 0:
             ctx.record(i, test_start_str, "PASS", duration, tb_cnt, br.full_log, "")
             consecutive_failures = 0
             if duration > SLOW_BOOT_THRESHOLD:
@@ -296,21 +304,29 @@ def _run_reboot_loop(ctx):
             else:
                 ctx.write_log(f"[{name}] [PASS✓] 设备启动成功，耗时 {duration} 秒")
         else:
+            if br.success:
+                reason = f"首次启动超时，补发 reboot {tb_cnt} 次后恢复"
+                ctx.write_log(f"[{name}] [FAIL] {reason}，累计耗时 {duration} 秒")
+            else:
+                reason = f"未检测到启动关键词（已等待 {duration:.0f} 秒）"
+                ctx.write_log(f"[{name}] [FAIL] 启动异常，已等待 {duration:.0f} 秒")
             ctx.record(i, test_start_str, "FAIL", duration, tb_cnt, br.full_log,
-                       f"未检测到启动关键词（已等待 {duration:.0f} 秒）", test_start_str)
+                       reason, test_start_str)
             consecutive_failures += 1
-            ctx.write_log(f"[{name}] [FAIL] 启动异常，已等待 {duration:.0f} 秒")
             if consecutive_failures >= 3:
                 ctx.write_log(f"[{name}] [WARN⚠️] 连续 {consecutive_failures} 次启动失败，请检查设备状态！")
 
         if tb_cnt > 0:
             ctx.write_log(f"[{name}] [INFO] 本次启动经历了 {tb_cnt} 次超时补发 reboot")
 
-        ctx.write_log(f"[{name}] [INFO] 等待 {WAIT_AFTER_BOOT} 秒后开始下一次重启...")
-        if ctx.stop_event and ctx.stop_event.wait(WAIT_AFTER_BOOT):
-            ctx.fatal_error = "用户中断测试"
-            ctx.write_log(f"[{name}] [WARN] 等待下一轮期间收到停止请求")
-            break
+        if i < REBOOT_COUNT:
+            ctx.write_log(f"[{name}] [INFO] 等待 {WAIT_AFTER_BOOT} 秒后开始下一次重启...")
+            if ctx.stop_event and ctx.stop_event.wait(WAIT_AFTER_BOOT):
+                ctx.fatal_error = "用户中断测试"
+                ctx.write_log(f"[{name}] [WARN] 等待下一轮期间收到停止请求")
+                break
+        else:
+            ctx.write_log(f"[{name}] [INFO] 已达到计划次数 {REBOOT_COUNT}，停止本设备测试。")
 
 
 def _persist_and_report(ctx, results_queue):

@@ -4,6 +4,7 @@
 
 """多设备重启自动化测试脚本 - 主入口"""
 
+import argparse
 import datetime
 import queue
 import threading
@@ -13,13 +14,14 @@ from queue import Queue
 from config import (
     DEVICES_CONFIG, BASE_OUTPUT_DIR, LOG_SERIAL_DATA, REBOOT_COUNT,
     MAX_BOOT_TIMEOUT_SECONDS, MAX_TIMEOUT_REBOOT_PER_TEST, SLOW_BOOT_THRESHOLD,
+    validate_runtime_settings,
 )
 from utils import (
     create_device_folders, ensure_dir_exists, calc_success_rate, ensure_utf8_console,
     validate_devices_config,
 )
 from core import run_single_device_test
-from reports import generate_summary_report, generate_html_report_from_excel
+from reboot_reports import generate_summary_report, generate_html_report_from_excel
 
 # 必须放在任何 print 之前：
 # Windows 中文环境下，输出一旦被重定向/走管道（IDE 输出面板、写日志文件），
@@ -57,7 +59,7 @@ def _generate_final_reports(all_results, device_folders, timestamp, interrupted=
     """
     if not all_results:
         print("\n[WARN] 没有收到任何设备结果，无法生成汇总报告。")
-        return
+        return False
 
     report_kind = "中断后的部分测试" if interrupted else "完整测试"
     print(f"\n正在生成{report_kind}报告...")
@@ -112,30 +114,44 @@ def _generate_final_reports(all_results, device_folders, timestamp, interrupted=
         source_label = f"SN_*_{timestamp}"
         if interrupted:
             source_label += "（用户中断，部分结果）"
-        generate_html_report_from_excel(
+        return bool(generate_html_report_from_excel(
             excel_files=current_excel_files,
             source_label=source_label,
             output_filename=(
                 f"测试报告_{timestamp}_已中断.html" if interrupted
                 else f"测试报告_{timestamp}.html"
             ),
-        )
+        ))
     except Exception as e:
         print(f"[WARN] HTML 报告生成失败（不影响测试结果）: {e}")
+        return False
 
 
-def main():
+def main(*, non_interactive=False, check_config=False):
     print("=============================================")
     print("     多设备重启自动化测试脚本")
     print("=============================================")
 
     config_errors = validate_devices_config(DEVICES_CONFIG)
+    if non_interactive and not config_errors:
+        for index, device in enumerate(DEVICES_CONFIG, 1):
+            if any(device.get(field) == "replace-me" for field in ("user_id", "license_id", "sn")):
+                config_errors.append(f"第 {index} 台设备仍使用示例占位值。")
+    if non_interactive or check_config:
+        config_errors.extend(validate_runtime_settings())
     if config_errors:
         print("\n[ERROR] 设备配置有问题，已取消本次测试：")
         for error in config_errors:
             print(f"  - {error}")
+        if non_interactive or check_config:
+            print("请检查 config/devices.py 和 config/settings.py 后再重新运行。")
+            return 2
         print("请修改 config/devices.py 后再重新运行。")
         return
+
+    if check_config:
+        print(f"[OK] 已通过运行参数和 {len(DEVICES_CONFIG)} 台设备的配置校验。")
+        return 0
 
     print(f"\n将同时测试以下 {len(DEVICES_CONFIG)} 台设备:")
     for idx, dev in enumerate(DEVICES_CONFIG, 1):
@@ -146,11 +162,12 @@ def main():
     print("  - 如需中断测试，请按 Ctrl+C")
     print("  - 请确保所有设备已连接且串口未被占用")
 
-    try:
-        input("\n按 Enter 键开始测试...")
-    except KeyboardInterrupt:
-        print("\n已取消，未开始测试。")
-        return
+    if not non_interactive:
+        try:
+            input("\n按 Enter 键开始测试...")
+        except KeyboardInterrupt:
+            print("\n已取消，未开始测试。")
+            return
 
     # 确保输出目录存在
     ensure_dir_exists(BASE_OUTPUT_DIR)
@@ -196,7 +213,14 @@ def main():
                 pass
 
             # 2) 再把已完成的结果收干净
-            completed_count += _collect_ready_results(results_queue, all_results)
+            newly_completed = _collect_ready_results(results_queue, all_results)
+            completed_count += newly_completed
+            if newly_completed and completed_count < len(DEVICES_CONFIG):
+                print(
+                    f"\n[INFO] 已完成 {completed_count}/{len(DEVICES_CONFIG)} 台设备；"
+                    "其余设备仍在测试，全部结束后生成本批次汇总报告。",
+                    flush=True,
+                )
 
             # 3) 只有"所有线程都已退出"才可能是异常丢失结果。
             #    不能按"已退出线程数"判断：正常跑完的设备线程也是已退出状态，
@@ -230,12 +254,27 @@ def main():
         _generate_final_reports(all_results, device_folders, timestamp, interrupted=True)
         print("   测试已中断。若设备正处于重启过程中，请等待其恢复正常后再操作设备。")
         print("   已生成本次已完成部分的汇总报告和 HTML 报告。")
-        return
+        return 130 if non_interactive else None
 
     # 输出剩余日志
     _print_remaining_logs(log_queue)
-    _generate_final_reports(all_results, device_folders, timestamp)
+    reports_ok = _generate_final_reports(all_results, device_folders, timestamp)
+    if non_interactive:
+        if not reports_ok:
+            print("[ERROR] 未生成本次测试的完整汇总报告。", flush=True)
+            return 1
+        if completed_count != len(DEVICES_CONFIG) or any(
+            item["error"] or item["pass_count"] != REBOOT_COUNT for item in all_results
+        ):
+            print("[ERROR] 存在失败、执行异常或未完成的重启轮次，请查看汇总报告。", flush=True)
+            return 1
+        return 0
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="多设备重启稳定性测试")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--non-interactive", action="store_true", help="跳过回车确认，直接开始测试")
+    mode.add_argument("--check-config", action="store_true", help="仅校验参数与设备配置，不连接串口")
+    args = parser.parse_args()
+    raise SystemExit(main(non_interactive=args.non_interactive, check_config=args.check_config))

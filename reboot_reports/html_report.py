@@ -29,7 +29,7 @@ from config import (
     REPORT_TITLE, REPORT_SUBTITLE, TEST_DATE, REPORT_SUBTITLE_LINE,
     REPORT_OUTPUT_FILENAME, FIRMWARE_INFO,
     SECTION_OVERVIEW, SECTION_SUMMARY, SECTION_DEVICES,
-    SECTION_FAILURES, SECTION_CONCLUSION, SECTION_ATTACHMENTS,
+    SECTION_FAILURES, SECTION_CONCLUSION,
     LABEL_FIRMWARE, LABEL_TEST_TYPE, LABEL_DEVICE_COUNT, LABEL_TEST_PER_DEVICE,
     LABEL_TOTAL_TESTS, LABEL_TIMEOUT, LABEL_KEYWORDS,
     UNIT_DEVICE, UNIT_TIMES, UNIT_SECONDS_PER_TEST, TEMPLATE_KEYWORDS,
@@ -39,7 +39,7 @@ from config import (
     CONCLUSION_HEADING, ADVICE_HEADING,
     ADVICE_SLOW_BOOT, ADVICE_MANY_FAILURES, ADVICE_TIMEOUT_REBOOT,
     ADVICE_SERIAL_ERROR, FIXED_ADVICE,
-    ATTACHMENTS, ERROR_NOTICE_TEMPLATE, DATA_SOURCE_NOTE_TEMPLATE,
+    ERROR_NOTICE_TEMPLATE, DATA_SOURCE_NOTE_TEMPLATE,
     REPORT_FOOTER_TEMPLATE,
     MSG_NO_DATA, MSG_DEVICE_OK, MSG_DEVICE_FILE_MISSING, MSG_DEVICE_READ_FAIL,
 )
@@ -412,8 +412,7 @@ def generate_html_report_from_excel(excel_files=None, source_label=None, output_
     sec_failures = cn_number(idx)
     if all_failures:
         idx += 1
-    sec_conclusion = cn_number(idx); idx += 1
-    sec_attachments = cn_number(idx)
+    sec_conclusion = cn_number(idx)
 
     # ---- 概况表数值 ----
     per_device = {d["total"] for d in devices_data}
@@ -443,13 +442,11 @@ def generate_html_report_from_excel(excel_files=None, source_label=None, output_
         "SEC_SUMMARY": sec_summary,
         "SEC_DEVICES": sec_devices,
         "SEC_CONCLUSION": sec_conclusion,
-        "SEC_ATTACHMENTS": sec_attachments,
 
         "TITLE_OVERVIEW": _esc(SECTION_OVERVIEW),
         "TITLE_SUMMARY": _esc(SECTION_SUMMARY),
         "TITLE_DEVICES": _esc(SECTION_DEVICES),
         "TITLE_CONCLUSION": _esc(SECTION_CONCLUSION),
-        "TITLE_ATTACHMENTS": _esc(SECTION_ATTACHMENTS),
 
         "LABEL_FIRMWARE": _esc(LABEL_FIRMWARE),
         "FIRMWARE_VALUE": "<br>".join(_esc(x) for x in FIRMWARE_INFO),
@@ -464,9 +461,10 @@ def generate_html_report_from_excel(excel_files=None, source_label=None, output_
         "LABEL_TIMEOUT": _esc(LABEL_TIMEOUT),
         "TIMEOUT_VALUE": f"{MAX_BOOT_TIMEOUT_SECONDS} {UNIT_SECONDS_PER_TEST}",
         "LABEL_KEYWORDS": _esc(LABEL_KEYWORDS),
-        "KEYWORDS_VALUE": safe_format(TEMPLATE_KEYWORDS,
+        "KEYWORDS_VALUE": (safe_format(TEMPLATE_KEYWORDS,
                                       kw1=_esc(SUCCESS_KEYWORD),
-                                      kw2=_esc(SUCCESS_KEYWORD2)),
+                                      kw2=_esc(SUCCESS_KEYWORD2))
+                           if SUCCESS_KEYWORD2 else f'"{_esc(SUCCESS_KEYWORD)}"'),
 
         "CARD_TOTAL_LABEL": _esc(CARD_LABEL_TOTAL),
         "CARD_TOTAL_VALUE": totals["total"],
@@ -498,7 +496,6 @@ def generate_html_report_from_excel(excel_files=None, source_label=None, output_
         "ADVICES": "\n".join(f"                <li>{a}</li>"
                              for a in _build_advices(devices_data, overall_rate, totals)),
 
-        "ATTACHMENTS": "\n".join(f"            <li>{_esc(a)}</li>" for a in ATTACHMENTS),
         "FOOTER": safe_format(REPORT_FOOTER_TEMPLATE,
                               generate_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
     }
